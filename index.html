@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>سو شل ميديا</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      direction: rtl;
+      background-color: #f0f0f0;
+      padding: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .box {
+      background: #fff;
+      padding: 15px;
+      margin: 15px auto;
+      border-radius: 10px;
+      max-width: 550px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    input, textarea, select {
+      width: 100%;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .add-btn { background-color: #28a745; }
+    .edit-btn { background-color: #007bff; }
+    .delete-btn { background-color: #dc3545; }
+    .whatsapp-btn { background-color: #25D366; }
+    .product img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #previewImage, #editPreviewImage {
+      margin: 10px 0;
+      max-height: 150px;
+      border-radius: 8px;
+      display: none;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    #searchInput {
+      max-width: 300px;
+      flex: 1;
+    }
+    #showAddFormBtn {
+      max-width: 150px;
+      flex-shrink: 0;
+      background-color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🛍️ سو شل ميديا</h1>
+
+  <div class="top-bar">
+    <input type="text" id="searchInput" placeholder="🔍 ابحث عن منتج..." oninput="renderProducts()">
+    <button id="showAddFormBtn" onclick="requestAddAccess()">➕ إضافة منتج</button>
+  </div>
+
+  <div id="addForm" class="box" style="display:none;">
+    <h2>إضافة منتج</h2>
+    <input type="text" id="title" placeholder="اسم المنتج">
+    <textarea id="desc" placeholder="وصف المنتج"></textarea>
+    <input type="file" id="imageInput" accept="image/*" onchange="previewImage(event)">
+    <img id="previewImage">
+    <input type="text" id="price" placeholder="السعر بالجنيه">
+    <input type="text" id="category" placeholder="التصنيف (اختياري)">
+    <input type="text" id="productWhatsApp" placeholder="رقم واتساب خاص بهذا المنتج (مثال: 2499xxxxxxx)">
+    <button class="add-btn" onclick="addProduct()">➕ إضافة المنتج</button>
+  </div>
+
+  <div id="products"></div>
+
+  <div id="editModal" style="display:none;">
+    <div class="box">
+      <h2>تعديل المنتج</h2>
+      <input type="text" id="editTitle">
+      <textarea id="editDesc"></textarea>
+      <input type="file" id="editImageInput" accept="image/*" onchange="previewEditImage(event)">
+      <img id="editPreviewImage">
+      <input type="text" id="editPrice">
+      <input type="text" id="editCategory">
+      <input type="text" id="editProductWhatsApp" placeholder="رقم واتساب خاص بهذا المنتج">
+      <button class="edit-btn" onclick="saveEdit()">💾 حفظ التعديل</button>
+      <button class="delete-btn" onclick="closeEdit()">❌ إلغاء</button>
+    </div>
+  </div>
+
+  <script>
+    const PASSWORD = "Mohannd14753";
+
+    function checkPassword() {
+      const input = prompt("أدخل كلمة السر:");
+      return input === PASSWORD;
+    }
+
+    function requestAddAccess() {
+      if (checkPassword()) {
+        document.getElementById("addForm").style.display = "block";
+      } else {
+        alert("كلمة السر غير صحيحة!");
+      }
+    }
+
+    let products = JSON.parse(localStorage.getItem("products")) || [];
+    let editIndex = -1;
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById("previewImage").src = e.target.result;
+        document.getElementById("previewImage").style.display = "block";
+        document.getElementById("previewImage").dataset.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function previewEditImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById("editPreviewImage").src = e.target.result;
+        document.getElementById("editPreviewImage").style.display = "block";
+        document.getElementById("editPreviewImage").dataset.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function addProduct() {
+      if (!checkPassword()) return alert("كلمة السر غير صحيحة!");
+
+      const title = document.getElementById("title").value;
+      const desc = document.getElementById("desc").value;
+      const price = document.getElementById("price").value;
+      const category = document.getElementById("category").value;
+      const img = document.getElementById("previewImage").dataset.src || "";
+      const productWhatsApp = document.getElementById("productWhatsApp").value;
+
+      if (!title || !desc || !price || !img || !productWhatsApp) return alert("يرجى ملء كل الحقول!");
+
+      products.push({ title, desc, price, category, img, productWhatsApp });
+      localStorage.setItem("products", JSON.stringify(products));
+      clearAddForm();
+      renderProducts();
+    }
+
+    function clearAddForm() {
+      document.getElementById("title").value = "";
+      document.getElementById("desc").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("category").value = "";
+      document.getElementById("productWhatsApp").value = "";
+      document.getElementById("imageInput").value = "";
+      document.getElementById("previewImage").style.display = "none";
+      document.getElementById("addForm").style.display = "none";
+    }
+
+    function renderProducts() {
+      const container = document.getElementById("products");
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      container.innerHTML = "";
+      const filtered = products.filter(p =>
+        p.title.toLowerCase().includes(search) || p.desc.toLowerCase().includes(search)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = "<p style='text-align:center;'>لا توجد منتجات</p>";
+        return;
+      }
+      filtered.forEach((p, i) => {
+        const div = document.createElement("div");
+        div.className = "box product";
+        div.innerHTML = `
+          <img src="${p.img}" alt="${p.title}">
+          <h3>${p.title}</h3>
+          <p>${p.desc}</p>
+          <p><strong>السعر:</strong> ${p.price} جنيه</p>
+          ${p.category ? `<p><strong>التصنيف:</strong> ${p.category}</p>` : ""}
+          <div class="action-buttons">
+            <button class="whatsapp-btn" onclick="orderWhatsApp(${i})">📱 طلب واتساب</button>
+            <button class="edit-btn" onclick="editProduct(${i})">✏️ تعديل</button>
+            <button class="delete-btn" onclick="deleteProduct(${i})">🗑️ حذف</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function orderWhatsApp(index) {
+      const p = products[index];
+      const num = p.productWhatsApp;
+      if (!num) return alert("لا يوجد رقم واتساب لهذا المنتج");
+      const msg = `مرحباً! أود طلب هذا المنتج:\n*${p.title}*\n${p.desc}\nالسعر: ${p.price} جنيه\n${p.category ? "التصنيف: " + p.category : ""}`;
+      window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, "_blank");
+    }
+
+    function editProduct(index) {
+      editIndex = index;
+      const p = products[index];
+      document.getElementById("editTitle").value = p.title;
+      document.getElementById("editDesc").value = p.desc;
+      document.getElementById("editPrice").value = p.price;
+      document.getElementById("editCategory").value = p.category || "";
+      document.getElementById("editProductWhatsApp").value = p.productWhatsApp || "";
+      document.getElementById("editPreviewImage").src = p.img;
+      document.getElementById("editPreviewImage").style.display = "block";
+      document.getElementById("editPreviewImage").dataset.src = p.img;
+      document.getElementById("editModal").style.display = "block";
+    }
+
+    function saveEdit() {
+      if (!checkPassword()) return alert("كلمة السر غير صحيحة!");
+      const title = document.getElementById("editTitle").value;
+      const desc = document.getElementById("editDesc").value;
+      const price = document.getElementById("editPrice").value;
+      const category = document.getElementById("editCategory").value;
+      const img = document.getElementById("editPreviewImage").dataset.src;
+      const productWhatsApp = document.getElementById("editProductWhatsApp").value;
+      if (!title || !desc || !price || !img || !productWhatsApp) return alert("يرجى ملء كل الحقول!");
+      products[editIndex] = { title, desc, price, category, img, productWhatsApp };
+      localStorage.setItem("products", JSON.stringify(products));
+      document.getElementById("editModal").style.display = "none";
+      renderProducts();
+    }
+
+    function closeEdit() {
+      document.getElementById("editModal").style.display = "none";
+    }
+
+    function deleteProduct(index) {
+      if (!checkPassword()) return alert("كلمة السر غير صحيحة!");
+      if (confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
+        products.splice(index, 1);
+        localStorage.setItem("products", JSON.stringify(products));
+        renderProducts();
+      }
+    }
+
+    renderProducts();
+  </script>
+</body>
+</html>
